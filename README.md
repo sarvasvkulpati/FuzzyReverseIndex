@@ -9,6 +9,8 @@ This was vaguely inspired by the [Memwalker](https://arxiv.org/pdf/2310.05029.pd
 This is just me documenting my explorations so far.
 
 
+## What is this?
+
 Take this paragraph from some data, for example:
 
 > Let's start with a distinction that should be obvious but is often overlooked: not every newly founded company is a startup. Millions of companies are started every year in the US. Only a tiny fraction are startups. Most are service businesses — restaurants, barbershops, plumbers, and so on. These are not startups, except in a few unusual cases. A barbershop isn't designed to grow fast. Whereas a search engine, for example, is.
@@ -25,11 +27,16 @@ while a reverse index of the data would look something like this:
 ```
 
 we can extract more *conceptual* information from this paragraph using a fuzzy index. Concepts that appear in this are
+
+```
 - obvious but overlooked things about startups
 - startups vs normal companies
+```
 
 Using LLMs, we can enhance the plaintext content with extra context, that can then help search.
 
+
+## Why is this useful?
 
 Possible ways this can help are:
 
@@ -39,6 +46,8 @@ Possible ways this can help are:
 
 In a way, this is a mix between operating in text space and vector space. Instead of just keywords (text space), we're indexing on concepts (vectors) represented as text (projected into text space).
 
+
+## Future explorations
 
 Future experiments, which I may or may not get to:
 - what kind of data is this good at? Likely not very keyword searchable data, but more idea dense data.
