@@ -10,6 +10,9 @@ openai = "^1.2.4"
 data = "^0.4"
 django-text = "^1.7.6"
 scipy = "^1.11.3"
+tqdm = "^4.66.1"
+numpy = "^1.26.2"
+scikit-learn = "^1.3.2"
 
 [tool.pyright]
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md

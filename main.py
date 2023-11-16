@@ -1,9 +1,11 @@
 from openai import OpenAI
-
+from tqdm import tqdm
 import ast
 import os
-from example_texts import steve_jobs_commencement_speech 
+from example_texts import steve_jobs_commencement_speech, startup_equals_growth
 from scipy.spatial.distance import cosine
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 import json 
 import pprint
 client =OpenAI(api_key= os.environ['OPENAI_API_KEY'])
@@ -23,15 +25,11 @@ printer = MyPrettyPrinter()
 
 
 
-
-
-
-
-
 def extract_fuzzy_concepts(text):
-
+  if len(text.split()) < 10:
+    return {"concepts" :[]}
   prompt = """
-  what are the concepts in this statement? you need to extract all fuzzy concepts that might be relevant. Make sure you're extracting *concepts* and not simply keywords that would be easily searchable.
+  what are the concepts in this statement? you need to extract around 3-5 fuzzy concepts that might be relevant. Make sure you're extracting *concepts* and not simply keywords that would be easily searchable.
 
   return as a JSON list of sentences I can cast into python. It should be in this format:
   {
@@ -58,8 +56,6 @@ def extract_fuzzy_concepts(text):
   
 
 
-
-
 def call_gpt(prompt, text):
   response = client.chat.completions.create(
       model="gpt-3.5-turbo-1106",
@@ -75,7 +71,6 @@ def call_gpt(prompt, text):
 
 
 
-
 def get_embedding(text):
   response = client.embeddings.create(
     model="text-embedding-ada-002",
@@ -88,10 +83,10 @@ def get_embedding(text):
 
 def is_similar(embed_a, embed_b, threshold=0.9):
   
-  similarity = cosine(embed_a, embed_b)
- 
-  print(1-similarity)
-  return (1-similarity) > threshold
+  distance = cosine(embed_a, embed_b)
+  print(1-distance)
+  # print(1-similarity)
+  return (1-distance) > threshold
 
 
 
@@ -111,12 +106,16 @@ def extend_index(fuzzy_reverse_index, text):
   Extends the fuzzy reverse index with the given text.
   """    
 
-  paragraphs = steve_jobs_commencement_speech.split("\n")
+  paragraphs = text.split("\n")
   cleaned_paragraphs = [p for p in paragraphs if p.strip() != '']
   
   for idx, p in enumerate(cleaned_paragraphs):
+    print(p)
     
     fuzzy_concepts = extract_fuzzy_concepts(p)
+
+    if len(fuzzy_concepts) == 0:
+      continue
 
     for concept in fuzzy_concepts:
       added = False
@@ -124,10 +123,10 @@ def extend_index(fuzzy_reverse_index, text):
       embed_concept = get_embedding(concept)
       
       # for every existing concept:
-      for fuzzy_concept in fuzzy_reverse_index.keys():
+      for fuzzy_concept in tqdm(fuzzy_reverse_index.keys()):
         # if similar enough
 
-        print('checking similarity between ', concept, ' and ', fuzzy_concept)
+        # print('checking similarity between ', concept, ' and ', fuzzy_concept)
   
         if is_similar(embed_concept, fuzzy_reverse_index[fuzzy_concept]["embedding"]):
           
@@ -139,10 +138,11 @@ def extend_index(fuzzy_reverse_index, text):
       # otherwise, add a new concept with index
       if not added:
         fuzzy_reverse_index[concept] = {"embedding" : embed_concept, "indices": [idx]}
-    # printer.pprint(fuzzy_reverse_index)
 
 
-
+def get_paras_by_indices(text, indices):
+  for idx in indices:
+    print(text.split('\n')[idx]) 
 
 
 def search_fuzzy_index(query, fuzzy_reverse_index):
@@ -158,23 +158,79 @@ def search_fuzzy_index(query, fuzzy_reverse_index):
       # return the indices of the paragraphs that contain that concept
       
       indices.extend(fuzzy_reverse_index[fuzzy_concept]["indices"])
-  return set(indices)
+  return list(set(indices))
+
+
+
+def paragraph_data(text):
+  paragraphs = text.split("\n")
+  cleaned_paragraphs = [p for p in paragraphs if p.strip() != '']
+
+  print(len(cleaned_paragraphs))
+  
+  p_embeddings = []
+
+  for p in cleaned_paragraphs:
+    p_embed = get_embedding(p)
+    p_embeddings.append(p_embed)
+  filename = "p_embeddings.json"
+  
+  with open(filename, "w") as f:
+    json.dump(p_embeddings, f, indent=4)
+  
+
+
+
+
+
+
+
+
+def vector_search(query, paragraphs, p_embeddings):
+  query_embed = get_embedding(query)
+  
+  similarities = cosine_similarity([query_embed], p_embeddings)[0]
+  top_5_indices = np.argsort(similarities)[::-1][:5]
+  print(len(paragraphs), len(p_embeddings))
+  print(top_5_indices)
+  
+  return [(paragraphs[i], similarities[i]) for i in top_5_indices]
+  
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
   # fuzzy_reverse_index = {}
-  # extend_index(fuzzy_reverse_index, steve_jobs_commencement_speech)
+  # extend_index(fuzzy_reverse_index, startup_equals_growth)
   # save_index(fuzzy_reverse_index)
 
+
+  # paragraph_data(startup_equals_growth)
+  
+
+  filename = "p_embeddings.json"
+  with open(filename, "r") as f:
+    p_embeddings = json.load(f)
+
+  # print(len(p_embeddings))
+
+  paragraphs = startup_equals_growth.split("\n")
+  cleaned_paragraphs = [p for p in paragraphs if p.strip() != '']
+
+  print(vector_search("what makes startups special?", cleaned_paragraphs,p_embeddings ))
+
   fuzzy_reverse_index = load_index()
+  
+  indices = search_fuzzy_index("what makes startups special?", fuzzy_reverse_index)
 
-  for key in fuzzy_reverse_index.keys():
-    print(key, fuzzy_reverse_index[key]["indices"])
-  # fuzzy_reverse_index = load_index()
-  print(search_fuzzy_index("on accepting death", fuzzy_reverse_index))
+  print(get_paras_by_indices(startup_equals_growth, indices))
 
-      
-
-
+ 
 
 
 
