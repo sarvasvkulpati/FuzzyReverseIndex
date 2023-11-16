@@ -6,7 +6,7 @@ What if we took existing rigid computer science concepts, and applied deep learn
 
 This was vaguely inspired by the [Memwalker](https://arxiv.org/pdf/2310.05029.pdf) paper. 
 
-This is just me documenting my explorations so far.
+(This is just me documenting my explorations so far. NOT a super clean or well documented repo! The main code is in main.py but it's pretty messy. Try forking it on replit to experiment.)
 
 
 ## What is this?
